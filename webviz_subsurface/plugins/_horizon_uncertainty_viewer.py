@@ -20,13 +20,13 @@ from webviz_subsurface_components import LayeredMap
 from webviz_config import WebvizPluginABC
 from webviz_config.webviz_store import webvizstore
 from webviz_config.utils import calculate_slider_step
+from timeit import default_timer as timer
 
 from .._datainput.well import load_well
 from .._datainput.surface import make_surface_layer, get_surface_fence, load_surface
 from .._datainput.huv_xsection import HuvXsection
 from .._datainput.huv_table import FilterTable
 from .._datainput import parse_model_file
-
 
 class HorizonUncertaintyViewer(WebvizPluginABC):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -384,6 +384,7 @@ The cross section is defined by a polyline interactively edited in the map view.
             ],
         )
         def _render_map(error_path):
+            start = timer()
             surface = xtgeo.surface_from_file(error_path, fformat="irap_binary")
             hillshading = True
             min_val = None
@@ -410,6 +411,8 @@ The cross section is defined by a polyline interactively edited in the map view.
             )
             layers = [s_layer]
             #layers.extend(well_layers)
+            end = timer()
+            print('_render_map: ', end-start)
             return layers
 
         @app.callback(
@@ -427,16 +430,20 @@ The cross section is defined by a polyline interactively edited in the map view.
             ],
         )
         def _render_xsection(n_clicks, n_clicks2, wellpath, coords, surface_paths, error_paths, well_settings):
+            start = timer()
             ctx = dash.callback_context
             surface_paths = get_path(surface_paths)
             error_paths = get_path(error_paths)
             if ctx.triggered[0]['prop_id'] == self.ids("well-dropdown") + '.value':
+                print('ctx.triggered[0]')
                 self.xsec.set_well(wellpath)
             elif ctx.triggered[0]['prop_id'] == self.ids("map-view") + '.polyline_points':
                 self.xsec.fence = get_fencespec(coords)
                 self.xsec.well_attributes = None
             self.xsec.set_error_and_surface_lines(surface_paths, error_paths)
             self.xsec.set_plotly_fig(surface_paths, error_paths, well_settings)
+            end = timer()
+            print('_render_xsection: ',end-start)
             return self.xsec.fig
 
         @app.callback(
@@ -534,8 +541,14 @@ The cross section is defined by a polyline interactively edited in the map view.
             ],
         )
         def _render_depth_error_tab(wellpath):
+            start = timer()
             self.xsec.set_well(wellpath)
+            end = timer()
+            print('_render_depth_error_tab1: ', end-start)
+            start = timer()
             df = self.xsec.get_error_table(wellpath)
+            end = timer()
+            print('_render_depth_error_tab2: ', end-start)
             return html.Div([
                 dash_table.DataTable(
                     id = self.ids('error_table'),

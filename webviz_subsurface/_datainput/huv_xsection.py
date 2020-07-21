@@ -4,6 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from pathlib import Path
 from webviz_config.common_cache import CACHE
+from timeit import default_timer as timer
 
 class HuvXsection:
     def __init__(
@@ -30,6 +31,7 @@ class HuvXsection:
 
     @CACHE.memoize(timeout=CACHE.TIMEOUT)
     def set_well(self, wellpath):
+        start = timer()
         if not wellpath is None:
             well = xtgeo.Well(Path(wellpath))
             self.fence = well.get_fence_polyline(nextend=100, sampling=5)
@@ -46,7 +48,8 @@ class HuvXsection:
                 "conditional_points": conditional_points,
                 "cp_sfc_linked": cp_sfc_linked,
             }
-
+        end = timer()
+        print('set_well: ', end-start)
     def get_plotly_well_data(self, well_settings):
         if self.well_attributes is None:
             return []
@@ -86,6 +89,7 @@ class HuvXsection:
                 self.surface_attributes[sfc_path]["error_line"] = de_line
 
     def get_error_table(self, wellpath):
+        start = timer()
         '''Finds depth error where index in surface line and conditional point x value is closest. 
         Difference in x value dependant on sampling rate of surface lines.
         Args:
@@ -120,6 +124,8 @@ class HuvXsection:
                         data['Conditional point RHLEN (m)'].append("%0.2f"%cp_x)
                         data['Surface line RHLEN (m)'].append("%0.2f"%sfc_line_x)
                         data['|\u0394RHLEN| (m)'].append("%0.2f"%abs(sfc_line_x-cp_x))
+        end = timer()
+        print('get_error_table: ', end-start)
         return pd.DataFrame(data)
 
     def get_plotly_layout(self, surfacepaths):
